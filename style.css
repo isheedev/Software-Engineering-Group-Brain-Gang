@@ -125,82 +125,6 @@ header {
     font-size: 0.9rem;
 }
 
-/* Login Section */
-.login-section {
-    padding: 4rem 2rem;
-    display: flex;
-    justify-content: center;
-}
-
-.login-box {
-    background: #111128;
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: 10px;
-    padding: 2rem;
-    width: 100%;
-    max-width: 400px;
-}
-
-.login-box h2 {
-    font-size: 1.5rem;
-    margin-bottom: 1.5rem;
-    text-align: center;
-}
-
-.form-group {
-    margin-bottom: 1rem;
-}
-
-.form-group label {
-    display: block;
-    font-size: 0.9rem;
-    color: #8888aa;
-    margin-bottom: 0.3rem;
-}
-
-.form-group input {
-    width: 100%;
-    padding: 0.6rem 0.8rem;
-    background: rgba(255, 255, 255, 0.06);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 6px;
-    color: #f0f0f5;
-    font-size: 0.95rem;
-}
-
-.form-group input:focus {
-    outline: none;
-    border-color: #009dff;
-}
-
-.form-group input::placeholder {
-    color: #5a5a7a;
-}
-
-.btn-login {
-    width: 100%;
-    padding: 0.7rem;
-    background: #009dff;
-    color: white;
-    border: none;
-    border-radius: 6px;
-    font-size: 1rem;
-    font-weight: 600;
-    cursor: pointer;
-    margin-top: 0.5rem;
-}
-
-.btn-login:hover {
-    background: #0080d4;
-}
-
-.signup-link {
-    text-align: center;
-    margin-top: 1rem;
-    color: #5a5a7a;
-    font-size: 0.9rem;
-}
-
 /* Footer */
 footer {
     background: #111128;
@@ -230,4 +154,41 @@ footer p {
         flex-direction: column;
         gap: 0.8rem;
     }
+}
+
+.hero-buttons {
+    margin-top: 30px;
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+}
+
+.btn-primary,
+.btn-secondary {
+    padding: 12px 28px;
+    border-radius: 8px;
+    font-weight: 600;
+    text-decoration: none;
+    transition: 0.3s;
+}
+
+.btn-primary {
+    background: #009dff;
+    color: white;
+}
+
+.btn-primary:hover {
+    background: #0080d4;
+    text-decoration: none;
+}
+
+.btn-secondary {
+    border: 2px solid #009dff;
+    color: #009dff;
+}
+
+.btn-secondary:hover {
+    background: #009dff;
+    color: white;
+    text-decoration: none;
 }
