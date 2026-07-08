@@ -437,14 +437,74 @@ function escapeHtml(str) {
 }
 
 /* ═══════════════════════════════════════════════
+   REGISTER PAGE LOGIC
+   ═══════════════════════════════════════════════ */
+function initRegisterPage() {
+    const form = document.getElementById('registerForm');
+    if (!form) return;
+
+    form.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const name = document.getElementById('reg-name').value.trim();
+        const email = document.getElementById('reg-email').value.trim().toLowerCase();
+        const pass = document.getElementById('reg-password').value;
+        const confirm = document.getElementById('reg-confirm').value;
+
+        if (pass !== confirm) { showToast('Passwords do not match', 'error'); return; }
+        if (pass.length < 6) { showToast('Password must be at least 6 characters', 'error'); return; }
+
+        const users = getUsers();
+        if (users.find(u => u.email === email)) {
+            showToast('An account with this email already exists', 'error');
+            return;
+        }
+
+        const user = { id: generateId(), name, email, password: pass };
+        users.push(user);
+        saveUsers(users);
+        setCurrentUser({ id: user.id, name: user.name, email: user.email });
+        showToast('Account created successfully!');
+        setTimeout(() => window.location.href = 'dashboard.html', 700);
+    });
+}
+
+/* ═══════════════════════════════════════════════
+   LOGIN PAGE LOGIC
+   ═══════════════════════════════════════════════ */
+function initLoginPage() {
+    const form = document.getElementById('loginForm');
+    if (!form) return;
+
+    form.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const email = document.getElementById('login-email').value.trim().toLowerCase();
+        const pass = document.getElementById('login-password').value;
+
+        const users = getUsers();
+        const user = users.find(u => u.email === email && u.password === pass);
+        if (!user) { showToast('Invalid email or password', 'error'); return; }
+
+        setCurrentUser({ id: user.id, name: user.name, email: user.email });
+        showToast('Welcome back, ' + user.name + '!');
+        setTimeout(() => window.location.href = 'dashboard.html', 700);
+    });
+}
+
+/* ═══════════════════════════════════════════════
    INIT
    ═══════════════════════════════════════════════ */
 document.addEventListener('DOMContentLoaded', () => {
     // Determine which page we're on
     const isDashboard = document.body.classList.contains('dashboard-body');
+    const isRegister = document.body.classList.contains('register-body');
+    const isLogin = document.body.classList.contains('login-body');
 
     if (isDashboard) {
         initDashboardPage();
+    } else if (isRegister) {
+        initRegisterPage();
+    } else if (isLogin) {
+        initLoginPage();
     } else {
         initIndexPage();
     }
