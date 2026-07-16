@@ -1,6 +1,4 @@
-/* ═══════════════════════════════════════════════
-   ProjectVault — Frontend Logic
-   ═══════════════════════════════════════════════ */
+/*ProjectVault — Frontend Logic*/
 
 // ── Storage Helpers ──
 const Storage = {
@@ -45,9 +43,7 @@ function generateId() {
     return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 }
 
-/* ═══════════════════════════════════════════════
-   INDEX PAGE LOGIC
-   ═══════════════════════════════════════════════ */
+/*INDEX PAGE LOGIC*/
 function initIndexPage() {
 
     // Navbar scroll effect
@@ -176,9 +172,7 @@ function initIndexPage() {
     }
 }
 
-/* ═══════════════════════════════════════════════
-   DASHBOARD PAGE LOGIC
-   ═══════════════════════════════════════════════ */
+/* DASHBOARD PAGE LOGIC */
 let currentDeleteId = null;
 
 function initDashboardPage() {
@@ -436,9 +430,7 @@ function escapeHtml(str) {
     return div.innerHTML;
 }
 
-/* ═══════════════════════════════════════════════
-   INIT
-   ═══════════════════════════════════════════════ */
+/*  INIT*/
 document.addEventListener('DOMContentLoaded', () => {
     // Determine which page we're on
     const isDashboard = document.body.classList.contains('dashboard-body');

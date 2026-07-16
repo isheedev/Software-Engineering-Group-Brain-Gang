@@ -39,14 +39,6 @@ header {
     align-items: center;
 }
 
-.logo {
-    font-size: 1.4rem;
-    font-weight: 700;
-}
-.logo span {
-    color: #009dff;
-}
-
 .nav-links {
     list-style: none;
     display: flex;

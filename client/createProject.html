@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Create Project - Create a New Project</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" integrity="sha512-iecdLmaskl7CVkqkXNQ/ZmH+zLeBuhoNPvSl5KYnjxe0iPtmFIB46ZmdtAc9eNBvH0H/ZpiBw==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <header>
+        <div class="header-container">
+            <h1 class="logo">Project<span>Vault</span></h1>
+            <nav>
+                <ul class="nav-links">
+                    <li><a href="#home">Home</a></li>
+                    <li><a href="#about">About</a></li>
+                    <li><a href="#login">Login</a></li>
+                    <li><a href="register.html">Register</a></li>
+                </ul>
+            </nav>
+        </div>
+    </header>
+
+    <h1 class="text-center mt-5">Create a New Project</h1>
+    <div class="container mt-4">
+        <form id="createProjectForm">
+            <div class="mb-3">
+                <label for="projectName" class="form-label">Project Name</label>
+                <input type="text" class="form-control" id="projectName" required>
+            </div>
+            <div class="mb-3">
+                <label for="projectDescription" class="form-label">Project Description</label>
+                <textarea class="form-control" id="projectDescription" rows="3" required></textarea>
+            </div>
+            <div class="mb-3">
+                <label for="projectTechnologies" class="form-label">Technologies Used</label>
+                <input type="text" class="form-control" id="projectTechnologies" placeholder="e.g., HTML, CSS, JavaScript" required>
+            </div>
+            <div class="mb-3">
+                <label for="projectImage" class="form-label">Project Image</label>
+                <input type="file" class="form-control" id="projectImage" accept="image/*">
+            </div>
+            <div class="mb-3">
+                <label for="projectGitHub" class="form-label">GitHub Repository Link</label>
+                <input type="url" class="form-control" id="projectGitHub" placeholder="https://github.com/username/repository" required>
+            </div>
+            <button type="submit" class="btn btn-primary">Create Project</button>
+        </form>
+    </div>
