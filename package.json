@@ -4,7 +4,8 @@
   "description": "ProjectVault is a web application that helps students organize and showcase their software projects in one place. Users can store project details such as descriptions, technologies used, and GitHub links.",
   "main": "script.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node server/server.js",
+    "dev": "nodemon server/server.js"
   },
   "repository": {
     "type": "git",
@@ -18,14 +19,11 @@
   },
   "homepage": "https://github.com/isheedev/Software-Engineering-Group-Brain-Gang#readme",
   "dependencies": {
-    "express": "^5.2.1"
+    "express": "^5.2.1",
+    "multer": "^1.4.5-lts.1"
   },
   "devDependencies": {
     "nodemon": "^3.1.14"
-  },
-  "scripts": {
-  "start": "node server/server.js",
-  "dev": "nodemon server/server.js"
-}
+  }
   
 }
