@@ -41,19 +41,12 @@ describe('Scenario 3: User logs in with correct email and password', () => {
   });
 });
 
-describe('Scenario 4: User adds a new project', () => {
-  test('project is saved to their project list', () => {
-    const reg = registerUser('Jane Doe', 'jane@example.com', 'password1', 'password1');
-    createProject(reg.user.id, {
-      name: 'ProjectVault',
-      description: 'A portfolio site',
-      technologies: ['JavaScript', 'Node.js'],
-      github: 'https://github.com/example/projectvault',
-      imageUrl: '',
-      imageData: ''
-    });
-
-    expect(getProjects()).toHaveLength(1);
-    expect(getProjects()[0].name).toBe('ProjectVault');
+describe('Scenario 4: User logs in with the wrong password', () => {
+  test('login fails with an error and no session is created', () => {
+    registerUser('Jane Doe', 'jane@example.com', 'password1', 'password1');
+    const result = loginUser('jane@example.com', 'wrongpassword');
+ 
+    expect(result.success).toBe(false);
+    expect(result.error).toMatch(/invalid/i);
   });
 });
