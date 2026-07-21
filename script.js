@@ -244,9 +244,7 @@ function initDashboardPage() {
     if (confirmDel) {
         confirmDel.addEventListener('click', () => {
             if (currentDeleteId) {
-                let projects = getProjects();
-                projects = projects.filter(p => p.id !== currentDeleteId);
-                saveProjects(projects);
+                deleteProjectById(currentDeleteId);
                 currentDeleteId = null;
                 bootstrap.Modal.getInstance(document.getElementById('deleteModal')).hide();
                 renderProjects();
@@ -292,6 +290,28 @@ function confirmDelete(id) {
     new bootstrap.Modal(document.getElementById('deleteModal')).show();
 }
 
+function createProject(userId, data) {
+    const projects = getProjects();
+    const project = {
+        id: generateId(),
+        userId,
+        ...data,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+    };
+    projects.push(project);
+    saveProjects(projects);
+    return project;
+}
+
+function deleteProjectById(id) {
+    const projects = getProjects();
+    const remaining = projects.filter(p => p.id !== id);
+    const removed = remaining.length !== projects.length;
+    saveProjects(remaining);
+    return removed;
+}
+
 function saveProject() {
     const user = getCurrentUser();
     if (!user) return;
@@ -306,28 +326,21 @@ function saveProject() {
     const previewImg = document.getElementById('image-preview');
     const imageData = previewImg.src && previewImg.src.startsWith('data:') ? previewImg.src : '';
 
-    let projects = getProjects();
-
     if (id) {
         // Edit existing
+        let projects = getProjects();
         const idx = projects.findIndex(p => p.id === id);
         if (idx !== -1) {
             projects[idx] = { ...projects[idx], name, description, technologies, github, imageUrl, imageData, updatedAt: new Date().toISOString() };
         }
+        saveProjects(projects);
         showToast('Project updated!');
     } else {
         // Create new
-        projects.push({
-            id: generateId(),
-            userId: user.id,
-            name, description, technologies, github, imageUrl, imageData,
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString()
-        });
+        createProject(user.id, { name, description, technologies, github, imageUrl, imageData });
         showToast('Project created!');
     }
 
-    saveProjects(projects);
     bootstrap.Modal.getInstance(document.getElementById('projectModal')).hide();
     renderProjects();
 }
@@ -437,6 +450,34 @@ function escapeHtml(str) {
 }
 
 /* ═══════════════════════════════════════════════
+   REGISTER / LOGIN — CORE LOGIC (testable, no DOM)
+   ═══════════════════════════════════════════════ */
+function registerUser(name, email, pass, confirm) {
+    if (pass !== confirm) return { success: false, error: 'Passwords do not match' };
+    if (pass.length < 6) return { success: false, error: 'Password must be at least 6 characters' };
+
+    const users = getUsers();
+    if (users.find(u => u.email === email)) {
+        return { success: false, error: 'An account with this email already exists' };
+    }
+
+    const user = { id: generateId(), name, email, password: pass };
+    users.push(user);
+    saveUsers(users);
+    setCurrentUser({ id: user.id, name: user.name, email: user.email });
+    return { success: true, user };
+}
+
+function loginUser(email, pass) {
+    const users = getUsers();
+    const user = users.find(u => u.email === email && u.password === pass);
+    if (!user) return { success: false, error: 'Invalid email or password' };
+
+    setCurrentUser({ id: user.id, name: user.name, email: user.email });
+    return { success: true, user };
+}
+
+/* ═══════════════════════════════════════════════
    REGISTER PAGE LOGIC
    ═══════════════════════════════════════════════ */
 function initRegisterPage() {
@@ -450,19 +491,9 @@ function initRegisterPage() {
         const pass = document.getElementById('reg-password').value;
         const confirm = document.getElementById('reg-confirm').value;
 
-        if (pass !== confirm) { showToast('Passwords do not match', 'error'); return; }
-        if (pass.length < 6) { showToast('Password must be at least 6 characters', 'error'); return; }
+        const result = registerUser(name, email, pass, confirm);
+        if (!result.success) { showToast(result.error, 'error'); return; }
 
-        const users = getUsers();
-        if (users.find(u => u.email === email)) {
-            showToast('An account with this email already exists', 'error');
-            return;
-        }
-
-        const user = { id: generateId(), name, email, password: pass };
-        users.push(user);
-        saveUsers(users);
-        setCurrentUser({ id: user.id, name: user.name, email: user.email });
         showToast('Account created successfully!');
         setTimeout(() => window.location.href = 'dashboard.html', 700);
     });
@@ -480,12 +511,10 @@ function initLoginPage() {
         const email = document.getElementById('login-email').value.trim().toLowerCase();
         const pass = document.getElementById('login-password').value;
 
-        const users = getUsers();
-        const user = users.find(u => u.email === email && u.password === pass);
-        if (!user) { showToast('Invalid email or password', 'error'); return; }
+        const result = loginUser(email, pass);
+        if (!result.success) { showToast(result.error, 'error'); return; }
 
-        setCurrentUser({ id: user.id, name: user.name, email: user.email });
-        showToast('Welcome back, ' + user.name + '!');
+        showToast('Welcome back, ' + result.user.name + '!');
         setTimeout(() => window.location.href = 'dashboard.html', 700);
     });
 }
@@ -509,3 +538,11 @@ document.addEventListener('DOMContentLoaded', () => {
         initIndexPage();
     }
 });
+
+// Exposed for unit testing only (has no effect in the browser)
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = {
+        registerUser, loginUser, createProject, deleteProjectById,
+        getUsers, saveUsers, getProjects, saveProjects, getUserProjects
+    };
+}
