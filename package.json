@@ -1,0 +1,25 @@
+{
+  "name": "software-engineering-group-brain-gang",
+  "version": "1.0.0",
+  "description": "ProjectVault is a web application that helps students organize and showcase their software projects in one place. Users can store project details such as descriptions, technologies used, and GitHub links.",
+  "main": "script.js",
+  "scripts": {
+    "test": "jest"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/isheedev/Software-Engineering-Group-Brain-Gang.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/isheedev/Software-Engineering-Group-Brain-Gang/issues"
+  },
+  "homepage": "https://github.com/isheedev/Software-Engineering-Group-Brain-Gang#readme",
+  "devDependencies": {
+    "jest": "^30.4.2",
+    "jest-environment-jsdom": "^30.4.1"
+  }
+}
