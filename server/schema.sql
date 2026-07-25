@@ -1,5 +1,4 @@
-git add server/schema.sql
-git commit -m "Add MySQL schema for users and projects tables"-- ProjectVault database schema
+-- ProjectVault database schema
 -- Run this in MySQL Workbench (or the mysql CLI) once to set up the database.
 
 CREATE DATABASE IF NOT EXISTS projectvault;
