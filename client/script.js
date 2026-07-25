@@ -1,25 +1,53 @@
-/*ProjectVault — Frontend Logic*/
+/* ProjectVault — Frontend Logic (now backed by the real API) */
 
-// ── Storage Helpers ──
+// ── Session Helpers (still uses localStorage, but only to remember who's logged in) ──
 const Storage = {
     get(key) { try { return JSON.parse(localStorage.getItem(key)); } catch { return null; } },
     set(key, val) { localStorage.setItem(key, JSON.stringify(val)); },
     remove(key) { localStorage.removeItem(key); }
 };
 
-// ── User Management ──
-function getUsers() { return Storage.get('pv_users') || []; }
-function saveUsers(users) { Storage.set('pv_users', users); }
 function getCurrentUser() { return Storage.get('pv_current_user'); }
 function setCurrentUser(user) { Storage.set('pv_current_user', user); }
 function logout() { Storage.remove('pv_current_user'); window.location.href = 'index.html'; }
 
-// ── Project Management ──
-function getProjects() { return Storage.get('pv_projects') || []; }
-function saveProjects(projects) { Storage.set('pv_projects', projects); }
+// ── API Helpers ──
+async function apiRegister(name, email, password, confirm) {
+    const res = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, email, password, confirm })
+    });
+    return res.json();
+}
 
-function getUserProjects(userId) {
-    return getProjects().filter(p => p.userId === userId);
+async function apiLogin(email, password) {
+    const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password })
+    });
+    return res.json();
+}
+
+async function apiGetProjects(userId) {
+    const res = await fetch(`/api/projects?userId=${encodeURIComponent(userId)}`);
+    return res.json();
+}
+
+async function apiCreateProject(formData) {
+    const res = await fetch('/api/projects', { method: 'POST', body: formData });
+    return res.json();
+}
+
+async function apiUpdateProject(id, formData) {
+    const res = await fetch(`/api/projects/${id}`, { method: 'PUT', body: formData });
+    return res.json();
+}
+
+async function apiDeleteProject(id) {
+    const res = await fetch(`/api/projects/${id}`, { method: 'DELETE' });
+    return res.json();
 }
 
 // ── Toast Notifications ──
@@ -38,132 +66,70 @@ function showToast(message, type = 'success') {
     setTimeout(() => toast.remove(), 3000);
 }
 
-// ── Generate Unique ID ──
-function generateId() {
-    return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+function escapeHtml(str) {
+    if (!str) return '';
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
 }
 
-/*INDEX PAGE LOGIC*/
-function initIndexPage() {
+/* ═══════════════════════════════════════════════
+   REGISTER PAGE
+   ═══════════════════════════════════════════════ */
+function initRegisterPage() {
+    const form = document.getElementById('registerForm');
+    if (!form) return;
 
-    // Navbar scroll effect
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const name = document.getElementById('reg-name').value.trim();
+        const email = document.getElementById('reg-email').value.trim();
+        const pass = document.getElementById('reg-password').value;
+        const confirm = document.getElementById('reg-confirm').value;
+
+        const result = await apiRegister(name, email, pass, confirm);
+        if (!result.success) { showToast(result.error, 'error'); return; }
+
+        setCurrentUser(result.user);
+        showToast('Account created successfully!');
+        setTimeout(() => window.location.href = 'dashboard.html', 700);
+    });
+}
+
+/* ═══════════════════════════════════════════════
+   LOGIN PAGE
+   ═══════════════════════════════════════════════ */
+function initLoginPage() {
+    const form = document.getElementById('loginForm');
+    if (!form) return;
+
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const email = document.getElementById('login-email').value.trim();
+        const pass = document.getElementById('login-password').value;
+
+        const result = await apiLogin(email, pass);
+        if (!result.success) { showToast(result.error, 'error'); return; }
+
+        setCurrentUser(result.user);
+        showToast('Welcome back, ' + result.user.name + '!');
+        setTimeout(() => window.location.href = 'dashboard.html', 700);
+    });
+}
+
+/* ═══════════════════════════════════════════════
+   INDEX PAGE
+   ═══════════════════════════════════════════════ */
+function initIndexPage() {
     window.addEventListener('scroll', () => {
         const nav = document.getElementById('main-navbar');
         if (nav) nav.classList.toggle('navbar-scrolled', window.scrollY > 50);
     });
 
-    // Animated stat counters
-    const counters = document.querySelectorAll('.stat-number[data-target]');
-    const animateCounter = (el) => {
-        const target = +el.dataset.target;
-        const duration = 1500;
-        const start = performance.now();
-        const step = (now) => {
-            const progress = Math.min((now - start) / duration, 1);
-            const eased = 1 - Math.pow(1 - progress, 3);
-            el.textContent = Math.floor(target * eased);
-            if (progress < 1) requestAnimationFrame(step);
-        };
-        requestAnimationFrame(step);
-    };
-
-    if (counters.length) {
-        const observer = new IntersectionObserver((entries) => {
-            entries.forEach(e => {
-                if (e.isIntersecting) {
-                    animateCounter(e.target);
-                    observer.unobserve(e.target);
-                }
-            });
-        }, { threshold: 0.5 });
-        counters.forEach(c => observer.observe(c));
-    }
-
-    // Scroll reveal for feature/step cards
-    const reveals = document.querySelectorAll('.feature-card, .step-card');
-    if (reveals.length) {
-        reveals.forEach(el => el.classList.add('reveal'));
-        const revealObs = new IntersectionObserver((entries) => {
-            entries.forEach(e => {
-                if (e.isIntersecting) {
-                    e.target.classList.add('visible');
-                    revealObs.unobserve(e.target);
-                }
-            });
-        }, { threshold: 0.15 });
-        reveals.forEach(el => revealObs.observe(el));
-    }
-
-    // Register Form
-    const regForm = document.getElementById('registerForm');
-    if (regForm) {
-        regForm.addEventListener('submit', (e) => {
-            e.preventDefault();
-            const name = document.getElementById('reg-name').value.trim();
-            const email = document.getElementById('reg-email').value.trim().toLowerCase();
-            const pass = document.getElementById('reg-password').value;
-            const confirm = document.getElementById('reg-confirm').value;
-
-            if (pass !== confirm) { showToast('Passwords do not match', 'error'); return; }
-
-            const users = getUsers();
-            if (users.find(u => u.email === email)) {
-                showToast('An account with this email already exists', 'error'); return;
-            }
-
-            const user = { id: generateId(), name, email, password: pass };
-            users.push(user);
-            saveUsers(users);
-            setCurrentUser({ id: user.id, name: user.name, email: user.email });
-            showToast('Account created successfully!');
-            bootstrap.Modal.getInstance(document.getElementById('registerModal')).hide();
-            setTimeout(() => window.location.href = 'dashboard.html', 600);
-        });
-    }
-
-    // Login Form
-    const loginForm = document.getElementById('loginForm');
-    if (loginForm) {
-        loginForm.addEventListener('submit', (e) => {
-            e.preventDefault();
-            const email = document.getElementById('login-email').value.trim().toLowerCase();
-            const pass = document.getElementById('login-password').value;
-
-            const users = getUsers();
-            const user = users.find(u => u.email === email && u.password === pass);
-            if (!user) { showToast('Invalid email or password', 'error'); return; }
-
-            setCurrentUser({ id: user.id, name: user.name, email: user.email });
-            showToast('Welcome back, ' + user.name + '!');
-            bootstrap.Modal.getInstance(document.getElementById('loginModal')).hide();
-            setTimeout(() => window.location.href = 'dashboard.html', 600);
-        });
-    }
-
-    // Modal switching
-    const switchToReg = document.getElementById('switch-to-register');
-    const switchToLog = document.getElementById('switch-to-login');
-    if (switchToReg) {
-        switchToReg.addEventListener('click', (e) => {
-            e.preventDefault();
-            bootstrap.Modal.getInstance(document.getElementById('loginModal')).hide();
-            setTimeout(() => new bootstrap.Modal(document.getElementById('registerModal')).show(), 300);
-        });
-    }
-    if (switchToLog) {
-        switchToLog.addEventListener('click', (e) => {
-            e.preventDefault();
-            bootstrap.Modal.getInstance(document.getElementById('registerModal')).hide();
-            setTimeout(() => new bootstrap.Modal(document.getElementById('loginModal')).show(), 300);
-        });
-    }
-
-    // If already logged in, redirect or show dashboard link
     const user = getCurrentUser();
     if (user) {
         const authItems = document.querySelectorAll('.nav-auth-item');
         authItems.forEach(el => el.innerHTML = '');
-
         const li = document.createElement('li');
         li.className = 'nav-item';
         li.innerHTML = `<a class="btn btn-gradient btn-sm nav-btn" href="dashboard.html"><i class="fa-solid fa-grid-2 me-1"></i> Dashboard</a>`;
@@ -172,228 +138,135 @@ function initIndexPage() {
     }
 }
 
-/* DASHBOARD PAGE LOGIC */
+/* ═══════════════════════════════════════════════
+   DASHBOARD PAGE
+   ═══════════════════════════════════════════════ */
+let allProjects = [];
 let currentDeleteId = null;
 
-function initDashboardPage() {
+async function initDashboardPage() {
     const user = getCurrentUser();
     if (!user) { window.location.href = 'index.html'; return; }
 
-    // Set greeting
     const greetEl = document.getElementById('dash-username');
     if (greetEl) greetEl.textContent = user.name.split(' ')[0];
 
-    // Logout
     const logoutBtn = document.getElementById('btn-logout');
     if (logoutBtn) logoutBtn.addEventListener('click', logout);
 
-    // Render projects
-    renderProjects();
+    await loadAndRenderProjects();
 
-    // Search & Filter
     const searchInput = document.getElementById('search-input');
     const filterTech = document.getElementById('filter-tech');
     const sortSelect = document.getElementById('sort-select');
-
     if (searchInput) searchInput.addEventListener('input', renderProjects);
     if (filterTech) filterTech.addEventListener('change', renderProjects);
     if (sortSelect) sortSelect.addEventListener('change', renderProjects);
 
-    // Project Form
-    const projForm = document.getElementById('projectForm');
-    if (projForm) {
-        projForm.addEventListener('submit', (e) => {
+    const form = document.getElementById('projectForm');
+    if (form) {
+        form.addEventListener('submit', async (e) => {
             e.preventDefault();
-            saveProject();
+            const id = document.getElementById('project-id').value;
+            const formData = new FormData();
+            formData.append('userId', user.id);
+            formData.append('name', document.getElementById('project-name').value.trim());
+            formData.append('description', document.getElementById('project-desc').value.trim());
+            formData.append('technologies', document.getElementById('project-techs').value.trim());
+            formData.append('github', document.getElementById('project-github').value.trim());
+            formData.append('imageUrl', document.getElementById('project-image').value.trim());
+
+            const fileInput = document.getElementById('project-image-upload');
+            if (fileInput && fileInput.files[0]) {
+                formData.append('image', fileInput.files[0]);
+            }
+
+            const result = id
+                ? await apiUpdateProject(id, formData)
+                : await apiCreateProject(formData);
+
+            if (!result.success) { showToast(result.error || 'Something went wrong', 'error'); return; }
+
+            showToast(id ? 'Project updated!' : 'Project added!');
+            bootstrap.Modal.getInstance(document.getElementById('projectModal')).hide();
+            form.reset();
+            document.getElementById('project-id').value = '';
+            await loadAndRenderProjects();
         });
     }
 
-    // Image upload preview
-    const imageUpload = document.getElementById('project-image-upload');
-    if (imageUpload) {
-        imageUpload.addEventListener('change', (e) => {
-            const file = e.target.files[0];
-            if (!file) return;
-            const reader = new FileReader();
-            reader.onload = (ev) => {
-                document.getElementById('image-preview').src = ev.target.result;
-                document.getElementById('image-preview-container').classList.remove('d-none');
-                document.getElementById('project-image').value = '';
-            };
-            reader.readAsDataURL(file);
-        });
-    }
-
-    const removeImg = document.getElementById('btn-remove-image');
-    if (removeImg) {
-        removeImg.addEventListener('click', () => {
-            document.getElementById('image-preview-container').classList.add('d-none');
-            document.getElementById('image-preview').src = '';
-            document.getElementById('project-image-upload').value = '';
-        });
-    }
-
-    // Delete confirmation
-    const confirmDel = document.getElementById('btn-confirm-delete');
-    if (confirmDel) {
-        confirmDel.addEventListener('click', () => {
-            if (currentDeleteId) {
-                deleteProjectById(currentDeleteId);
-                currentDeleteId = null;
-                bootstrap.Modal.getInstance(document.getElementById('deleteModal')).hide();
-                renderProjects();
+    const confirmDeleteBtn = document.getElementById('btn-confirm-delete');
+    if (confirmDeleteBtn) {
+        confirmDeleteBtn.addEventListener('click', async () => {
+            if (!currentDeleteId) return;
+            const result = await apiDeleteProject(currentDeleteId);
+            if (result.success) {
                 showToast('Project deleted');
+                bootstrap.Modal.getInstance(document.getElementById('deleteModal')).hide();
+                await loadAndRenderProjects();
+            } else {
+                showToast(result.error || 'Could not delete project', 'error');
             }
         });
     }
 }
 
-function openNewProject() {
-    document.getElementById('projectModalLabel').textContent = 'New Project';
-    document.getElementById('projectForm').reset();
-    document.getElementById('project-id').value = '';
-    document.getElementById('image-preview-container').classList.add('d-none');
-}
-
-function openEditProject(id) {
-    const projects = getProjects();
-    const p = projects.find(pr => pr.id === id);
-    if (!p) return;
-
-    document.getElementById('projectModalLabel').textContent = 'Edit Project';
-    document.getElementById('project-id').value = p.id;
-    document.getElementById('project-name').value = p.name;
-    document.getElementById('project-desc').value = p.description;
-    document.getElementById('project-techs').value = p.technologies.join(', ');
-    document.getElementById('project-github').value = p.github || '';
-    document.getElementById('project-image').value = p.imageUrl || '';
-    document.getElementById('project-image-upload').value = '';
-
-    if (p.imageData || p.imageUrl) {
-        document.getElementById('image-preview').src = p.imageData || p.imageUrl;
-        document.getElementById('image-preview-container').classList.remove('d-none');
-    } else {
-        document.getElementById('image-preview-container').classList.add('d-none');
-    }
-
-    new bootstrap.Modal(document.getElementById('projectModal')).show();
-}
-
-function confirmDelete(id) {
-    currentDeleteId = id;
-    new bootstrap.Modal(document.getElementById('deleteModal')).show();
-}
-
-function createProject(userId, data) {
-    const projects = getProjects();
-    const project = {
-        id: generateId(),
-        userId,
-        ...data,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-    };
-    projects.push(project);
-    saveProjects(projects);
-    return project;
-}
-
-function deleteProjectById(id) {
-    const projects = getProjects();
-    const remaining = projects.filter(p => p.id !== id);
-    const removed = remaining.length !== projects.length;
-    saveProjects(remaining);
-    return removed;
-}
-
-function saveProject() {
+async function loadAndRenderProjects() {
     const user = getCurrentUser();
     if (!user) return;
-
-    const id = document.getElementById('project-id').value;
-    const name = document.getElementById('project-name').value.trim();
-    const description = document.getElementById('project-desc').value.trim();
-    const technologies = document.getElementById('project-techs').value
-        .split(',').map(t => t.trim()).filter(t => t);
-    const github = document.getElementById('project-github').value.trim();
-    const imageUrl = document.getElementById('project-image').value.trim();
-    const previewImg = document.getElementById('image-preview');
-    const imageData = previewImg.src && previewImg.src.startsWith('data:') ? previewImg.src : '';
-
-    if (id) {
-        // Edit existing
-        let projects = getProjects();
-        const idx = projects.findIndex(p => p.id === id);
-        if (idx !== -1) {
-            projects[idx] = { ...projects[idx], name, description, technologies, github, imageUrl, imageData, updatedAt: new Date().toISOString() };
-        }
-        saveProjects(projects);
-        showToast('Project updated!');
-    } else {
-        // Create new
-        createProject(user.id, { name, description, technologies, github, imageUrl, imageData });
-        showToast('Project created!');
-    }
-
-    bootstrap.Modal.getInstance(document.getElementById('projectModal')).hide();
+    const result = await apiGetProjects(user.id);
+    allProjects = result.success ? result.projects : [];
     renderProjects();
 }
 
 function renderProjects() {
-    const user = getCurrentUser();
-    if (!user) return;
-
     const grid = document.getElementById('projects-grid');
     const empty = document.getElementById('empty-state');
     if (!grid) return;
 
-    let projects = getUserProjects(user.id);
+    let projects = [...allProjects];
 
-    // Search filter
     const search = (document.getElementById('search-input')?.value || '').toLowerCase();
     if (search) {
         projects = projects.filter(p =>
             p.name.toLowerCase().includes(search) ||
             p.description.toLowerCase().includes(search) ||
-            p.technologies.some(t => t.toLowerCase().includes(search))
+            p.technologies.toLowerCase().includes(search)
         );
     }
 
-    // Tech filter
     const techFilter = document.getElementById('filter-tech')?.value || '';
     if (techFilter) {
         projects = projects.filter(p =>
-            p.technologies.some(t => t.toLowerCase() === techFilter.toLowerCase())
+            p.technologies.toLowerCase().split(',').map(t => t.trim()).includes(techFilter.toLowerCase())
         );
     }
 
-    // Sort
     const sort = document.getElementById('sort-select')?.value || 'newest';
-    if (sort === 'newest') projects.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-    else if (sort === 'oldest') projects.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+    if (sort === 'newest') projects.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+    else if (sort === 'oldest') projects.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
     else if (sort === 'name') projects.sort((a, b) => a.name.localeCompare(b.name));
 
-    // Populate tech filter dropdown (from all user projects)
-    populateTechFilter(user.id);
+    populateTechFilter();
 
     if (projects.length === 0) {
         grid.innerHTML = '';
         if (empty) empty.classList.remove('d-none');
         return;
     }
-
     if (empty) empty.classList.add('d-none');
 
     grid.innerHTML = projects.map(p => {
-        const imgSrc = p.imageData || p.imageUrl;
-        const imgHtml = imgSrc
-            ? `<img src="${escapeHtml(imgSrc)}" alt="${escapeHtml(p.name)}" class="project-img">`
+        const imgHtml = p.image_url
+            ? `<img src="${escapeHtml(p.image_url)}" alt="${escapeHtml(p.name)}" class="project-img">`
             : `<div class="project-img-placeholder"><i class="fa-solid fa-code"></i></div>`;
 
-        const techTags = p.technologies.map(t => `<span class="tech-tag">${escapeHtml(t)}</span>`).join('');
+        const techTags = p.technologies.split(',').map(t =>
+            `<span class="tech-tag">${escapeHtml(t.trim())}</span>`
+        ).join('');
 
-        const githubHtml = p.github
-            ? `<a href="${escapeHtml(p.github)}" target="_blank" class="github-link"><i class="fa-brands fa-github"></i> Repo</a>`
+        const githubHtml = p.github_link
+            ? `<a href="${escapeHtml(p.github_link)}" target="_blank" class="github-link"><i class="fa-brands fa-github"></i> Repo</a>`
             : '<span></span>';
 
         return `
@@ -408,8 +281,8 @@ function renderProjects() {
                 <div class="project-card-footer">
                     ${githubHtml}
                     <div class="project-actions">
-                        <button onclick="openEditProject('${p.id}')" title="Edit"><i class="fa-solid fa-pen-to-square"></i></button>
-                        <button onclick="confirmDelete('${p.id}')" class="btn-delete" title="Delete"><i class="fa-solid fa-trash"></i></button>
+                        <button onclick="openEditProject(${p.id})" title="Edit"><i class="fa-solid fa-pen-to-square"></i></button>
+                        <button onclick="confirmDelete(${p.id})" class="btn-delete" title="Delete"><i class="fa-solid fa-trash"></i></button>
                     </div>
                 </div>
             </div>
@@ -417,13 +290,12 @@ function renderProjects() {
     }).join('');
 }
 
-function populateTechFilter(userId) {
+function populateTechFilter() {
     const select = document.getElementById('filter-tech');
     if (!select) return;
 
-    const allProjects = getUserProjects(userId);
     const techSet = new Set();
-    allProjects.forEach(p => p.technologies.forEach(t => techSet.add(t)));
+    allProjects.forEach(p => p.technologies.split(',').forEach(t => techSet.add(t.trim())));
 
     const currentVal = select.value;
     select.innerHTML = '<option value="">All Technologies</option>';
@@ -436,92 +308,34 @@ function populateTechFilter(userId) {
     });
 }
 
-function escapeHtml(str) {
-    if (!str) return '';
-    const div = document.createElement('div');
-    div.textContent = str;
-    return div.innerHTML;
+function openNewProject() {
+    document.getElementById('projectForm').reset();
+    document.getElementById('project-id').value = '';
+    document.getElementById('projectModalLabel').textContent = 'New Project';
 }
 
-<<<<<<< HEAD:client/script.js
-/*  INIT*/
-=======
-/* ═══════════════════════════════════════════════
-   REGISTER / LOGIN — CORE LOGIC (testable, no DOM)
-   ═══════════════════════════════════════════════ */
-function registerUser(name, email, pass, confirm) {
-    if (pass !== confirm) return { success: false, error: 'Passwords do not match' };
-    if (pass.length < 6) return { success: false, error: 'Password must be at least 6 characters' };
-
-    const users = getUsers();
-    if (users.find(u => u.email === email)) {
-        return { success: false, error: 'An account with this email already exists' };
-    }
-
-    const user = { id: generateId(), name, email, password: pass };
-    users.push(user);
-    saveUsers(users);
-    setCurrentUser({ id: user.id, name: user.name, email: user.email });
-    return { success: true, user };
+function openEditProject(id) {
+    const p = allProjects.find(p => p.id === id);
+    if (!p) return;
+    document.getElementById('project-id').value = p.id;
+    document.getElementById('project-name').value = p.name;
+    document.getElementById('project-desc').value = p.description;
+    document.getElementById('project-techs').value = p.technologies;
+    document.getElementById('project-github').value = p.github_link || '';
+    document.getElementById('project-image').value = p.image_url || '';
+    document.getElementById('projectModalLabel').textContent = 'Edit Project';
+    new bootstrap.Modal(document.getElementById('projectModal')).show();
 }
 
-function loginUser(email, pass) {
-    const users = getUsers();
-    const user = users.find(u => u.email === email && u.password === pass);
-    if (!user) return { success: false, error: 'Invalid email or password' };
-
-    setCurrentUser({ id: user.id, name: user.name, email: user.email });
-    return { success: true, user };
-}
-
-/* ═══════════════════════════════════════════════
-   REGISTER PAGE LOGIC
-   ═══════════════════════════════════════════════ */
-function initRegisterPage() {
-    const form = document.getElementById('registerForm');
-    if (!form) return;
-
-    form.addEventListener('submit', (e) => {
-        e.preventDefault();
-        const name = document.getElementById('reg-name').value.trim();
-        const email = document.getElementById('reg-email').value.trim().toLowerCase();
-        const pass = document.getElementById('reg-password').value;
-        const confirm = document.getElementById('reg-confirm').value;
-
-        const result = registerUser(name, email, pass, confirm);
-        if (!result.success) { showToast(result.error, 'error'); return; }
-
-        showToast('Account created successfully!');
-        setTimeout(() => window.location.href = 'dashboard.html', 700);
-    });
-}
-
-/* ═══════════════════════════════════════════════
-   LOGIN PAGE LOGIC
-   ═══════════════════════════════════════════════ */
-function initLoginPage() {
-    const form = document.getElementById('loginForm');
-    if (!form) return;
-
-    form.addEventListener('submit', (e) => {
-        e.preventDefault();
-        const email = document.getElementById('login-email').value.trim().toLowerCase();
-        const pass = document.getElementById('login-password').value;
-
-        const result = loginUser(email, pass);
-        if (!result.success) { showToast(result.error, 'error'); return; }
-
-        showToast('Welcome back, ' + result.user.name + '!');
-        setTimeout(() => window.location.href = 'dashboard.html', 700);
-    });
+function confirmDelete(id) {
+    currentDeleteId = id;
+    new bootstrap.Modal(document.getElementById('deleteModal')).show();
 }
 
 /* ═══════════════════════════════════════════════
    INIT
    ═══════════════════════════════════════════════ */
->>>>>>> main:script.js
 document.addEventListener('DOMContentLoaded', () => {
-    // Determine which page we're on
     const isDashboard = document.body.classList.contains('dashboard-body');
     const isRegister = document.body.classList.contains('register-body');
     const isLogin = document.body.classList.contains('login-body');
@@ -536,11 +350,3 @@ document.addEventListener('DOMContentLoaded', () => {
         initIndexPage();
     }
 });
-
-// Exposed for unit testing only (has no effect in the browser)
-if (typeof module !== 'undefined' && module.exports) {
-    module.exports = {
-        registerUser, loginUser, createProject, deleteProjectById,
-        getUsers, saveUsers, getProjects, saveProjects, getUserProjects
-    };
-}
