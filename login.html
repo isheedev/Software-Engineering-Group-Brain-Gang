@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Log In — ProjectVault</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css">
+</head>
+
+<body class="login-body">
+    <header>
+        <div class="header-container">
+            <a href="index.html" style="text-decoration:none;">
+                <h1 class="logo">Project<span>Vault</span></h1>
+            </a>
+            <nav>
+                <ul class="nav-links">
+                    <li><a href="index.html">Home</a></li>
+                    <li><a href="register.html">Sign Up</a></li>
+                </ul>
+            </nav>
+        </div>
+    </header>
+
+    <main class="auth-main">
+        <div class="auth-card">
+            <h2>Welcome back</h2>
+            <p class="auth-subtitle">Log in to manage your projects</p>
+
+            <form id="loginForm">
+                <div class="form-group">
+                    <label for="login-email">Email</label>
+                    <input type="email" id="login-email" placeholder="jane@example.com" required>
+                </div>
+                <div class="form-group">
+                    <label for="login-password">Password</label>
+                    <input type="password" id="login-password" placeholder="Your password" required>
+                </div>
+                <button type="submit" class="btn-primary">Log In</button>
+            </form>
+
+            <p class="auth-switch">Don't have an account? <a href="register.html">Sign up</a></p>
+        </div>
+    </main>
+
+    <footer>
+        <p>&copy; 2026 ProjectVault — CSC 4350 Group 1</p>
+        <p>Alexander Khauv &middot; Tahia Shawkat &middot; Ismael Fong</p>
+    </footer>
+
+    <script src="script.js"></script>
+</body>
+
+</html>
