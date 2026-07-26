@@ -1,15 +1,34 @@
 /* ProjectVault — Frontend Logic (now backed by the real API) */
 
-// ── Session Helpers (still uses localStorage, but only to remember who's logged in) ──
+// ── Session Helpers (localStorage remembers who's logged in, with a 15-minute expiry) ──
+const SESSION_DURATION_MS = 15 * 60 * 1000; // 15 minutes
+
 const Storage = {
     get(key) { try { return JSON.parse(localStorage.getItem(key)); } catch { return null; } },
     set(key, val) { localStorage.setItem(key, JSON.stringify(val)); },
     remove(key) { localStorage.removeItem(key); }
 };
 
-function getCurrentUser() { return Storage.get('pv_current_user'); }
-function setCurrentUser(user) { Storage.set('pv_current_user', user); }
-function logout() { Storage.remove('pv_current_user'); window.location.href = 'index.html'; }
+function getCurrentUser() {
+    const session = Storage.get('pv_session');
+    if (!session) return null;
+
+    if (Date.now() > session.expiresAt) {
+        Storage.remove('pv_session');
+        return null;
+    }
+
+    return session.user;
+}
+
+function setCurrentUser(user) {
+    Storage.set('pv_session', {
+        user,
+        expiresAt: Date.now() + SESSION_DURATION_MS
+    });
+}
+
+function logout() { Storage.remove('pv_session'); window.location.href = 'index.html'; }
 
 // ── API Helpers ──
 async function apiRegister(name, email, password, confirm) {
@@ -80,6 +99,11 @@ function initRegisterPage() {
     const form = document.getElementById('registerForm');
     if (!form) return;
 
+    if (getCurrentUser()) {
+        window.location.href = 'dashboard.html';
+        return;
+    }
+
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
         const name = document.getElementById('reg-name').value.trim();
@@ -102,6 +126,11 @@ function initRegisterPage() {
 function initLoginPage() {
     const form = document.getElementById('loginForm');
     if (!form) return;
+
+    if (getCurrentUser()) {
+        window.location.href = 'dashboard.html';
+        return;
+    }
 
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
