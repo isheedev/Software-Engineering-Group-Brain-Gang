@@ -12,7 +12,7 @@
 </head>
 <body class="dashboard-body">
 
-    <!-- ══════════ DASHBOARD NAVBAR ══════════ -->
+    <!-- DASHBOARD NAVBAR -->
     <nav class="navbar navbar-expand-lg fixed-top navbar-scrolled" id="dash-navbar">
         <div class="container">
             <a class="navbar-brand d-flex align-items-center gap-2" href="index.html">
@@ -24,6 +24,11 @@
             </button>
             <div class="collapse navbar-collapse" id="dashNav">
                 <ul class="navbar-nav ms-auto align-items-center gap-lg-3">
+                    <li class="nav-item">
+                        <a class="nav-link text-light" href="explore.html">
+                            <i class="fa-solid fa-compass me-1"></i> Explore
+                        </a>
+                    </li>
                     <li class="nav-item">
                         <span class="nav-link user-greeting" id="user-greeting">
                             <i class="fa-solid fa-circle-user me-1"></i> Hello, <span id="dash-username">User</span>
@@ -39,7 +44,7 @@
         </div>
     </nav>
 
-    <!-- ══════════ DASHBOARD CONTENT ══════════ -->
+    <!-- DASHBOARD CONTENT -->
     <main class="dashboard-main">
         <div class="container">
 
@@ -93,7 +98,7 @@
         </div>
     </main>
 
-    <!-- ══════════ PROJECT MODAL (Add / Edit) ══════════ -->
+    <!-- PROJECT MODAL (Add / Edit) -->
     <div class="modal fade" id="projectModal" tabindex="-1" aria-labelledby="projectModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
             <div class="modal-content glass-modal">
@@ -146,7 +151,7 @@
         </div>
     </div>
 
-    <!-- ══════════ DELETE CONFIRMATION ══════════ -->
+    <!-- DELETE CONFIRMATION -->
     <div class="modal fade" id="deleteModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered modal-sm">
             <div class="modal-content glass-modal">

@@ -68,6 +68,18 @@ router.put('/:id', upload.single('image'), async (req, res) => {
   }
 });
 
+// PATCH /api/projects/:id/feature  { isFeatured: true/false }
+router.patch('/:id/feature', async (req, res) => {
+  try {
+    const { isFeatured } = req.body;
+    await pool.query('UPDATE projects SET is_featured = ? WHERE id = ?', [!!isFeatured, req.params.id]);
+    res.json({ success: true, isFeatured: !!isFeatured });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, error: 'Server error' });
+  }
+});
+
 // DELETE /api/projects/:id
 router.delete('/:id', async (req, res) => {
   try {

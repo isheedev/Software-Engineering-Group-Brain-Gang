@@ -20,6 +20,17 @@ CREATE TABLE IF NOT EXISTS projects (
   technologies VARCHAR(255) NOT NULL,
   github_link VARCHAR(255),
   image_url VARCHAR(500),
+  is_featured BOOLEAN NOT NULL DEFAULT FALSE,
+  likes_count INT NOT NULL DEFAULT 0,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS project_comments (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  project_id INT NOT NULL,
+  commenter_name VARCHAR(100) NOT NULL,
+  content TEXT NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
 );

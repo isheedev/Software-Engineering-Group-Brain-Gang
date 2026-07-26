@@ -1,6 +1,6 @@
 /* ProjectVault — Frontend Logic (now backed by the real API) */
 
-// ── Session Helpers (localStorage remembers who's logged in, with a 15-minute expiry) ──
+// Session Helpers (localStorage remembers who's logged in, with a 15 minute expiry timer) 
 const SESSION_DURATION_MS = 15 * 60 * 1000; // 15 minutes
 
 const Storage = {
@@ -310,6 +310,9 @@ function renderProjects() {
                 <div class="project-card-footer">
                     ${githubHtml}
                     <div class="project-actions">
+                        <button onclick="toggleFeatured(${p.id}, ${!p.is_featured})" title="${p.is_featured ? 'Remove from Explore' : 'Feature on Explore'}" class="${p.is_featured ? 'btn-featured-active' : ''}">
+                            <i class="fa-solid fa-star"></i>
+                        </button>
                         <button onclick="openEditProject(${p.id})" title="Edit"><i class="fa-solid fa-pen-to-square"></i></button>
                         <button onclick="confirmDelete(${p.id})" class="btn-delete" title="Delete"><i class="fa-solid fa-trash"></i></button>
                     </div>
@@ -362,14 +365,150 @@ function confirmDelete(id) {
 }
 
 /* ═══════════════════════════════════════════════
+   EXPLORE PAGE (public — no login required to view, like, or comment)
+   ═══════════════════════════════════════════════ */
+let exploreProjects = [];
+
+async function initExplorePage() {
+    const grid = document.getElementById('explore-grid');
+    if (!grid) return;
+
+    const res = await fetch('/api/explore');
+    const result = await res.json();
+    exploreProjects = result.success ? result.projects : [];
+    renderExploreGrid();
+
+    const commentForm = document.getElementById('commentForm');
+    if (commentForm) {
+        commentForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const projectId = document.getElementById('comment-project-id').value;
+            const commenterName = document.getElementById('comment-name').value.trim();
+            const content = document.getElementById('comment-content').value.trim();
+
+            const res = await fetch(`/api/explore/${projectId}/comments`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ commenterName, content })
+            });
+            const result = await res.json();
+            if (!result.success) { showToast(result.error || 'Could not post comment', 'error'); return; }
+
+            document.getElementById('comment-content').value = '';
+            await loadComments(projectId);
+        });
+    }
+}
+
+function renderExploreGrid() {
+    const grid = document.getElementById('explore-grid');
+    const empty = document.getElementById('explore-empty');
+    if (!grid) return;
+
+    if (exploreProjects.length === 0) {
+        grid.innerHTML = '';
+        if (empty) empty.classList.remove('d-none');
+        return;
+    }
+    if (empty) empty.classList.add('d-none');
+
+    grid.innerHTML = exploreProjects.map(p => {
+        const imgHtml = p.image_url
+            ? `<img src="${escapeHtml(p.image_url)}" alt="${escapeHtml(p.name)}" class="project-img">`
+            : `<div class="project-img-placeholder"><i class="fa-solid fa-code"></i></div>`;
+
+        const techTags = p.technologies.split(',').map(t =>
+            `<span class="tech-tag">${escapeHtml(t.trim())}</span>`
+        ).join('');
+
+        return `
+        <div class="col-sm-6 col-lg-4">
+            <div class="project-card">
+                ${imgHtml}
+                <div class="project-card-body">
+                    <h3>${escapeHtml(p.name)}</h3>
+                    <p class="text-muted small mb-2">by ${escapeHtml(p.owner_name)}</p>
+                    <p>${escapeHtml(p.description)}</p>
+                    <div class="tech-tags">${techTags}</div>
+                </div>
+                <div class="project-card-footer">
+                    <div class="d-flex gap-3">
+                        <button onclick="likeProject(${p.id})" class="btn-like" title="Like">
+                            <i class="fa-solid fa-heart"></i> <span id="likes-${p.id}">${p.likes_count}</span>
+                        </button>
+                        <button onclick="openComments(${p.id}, '${escapeHtml(p.name).replace(/'/g, "\\'")}')" class="btn-like" title="Comments">
+                            <i class="fa-solid fa-comment"></i> ${p.comment_count}
+                        </button>
+                    </div>
+                    ${p.github_link ? `<a href="${escapeHtml(p.github_link)}" target="_blank" class="github-link"><i class="fa-brands fa-github"></i></a>` : ''}
+                </div>
+            </div>
+        </div>`;
+    }).join('');
+}
+
+async function likeProject(id) {
+    const res = await fetch(`/api/explore/${id}/like`, { method: 'POST' });
+    const result = await res.json();
+    if (result.success) {
+        const span = document.getElementById(`likes-${id}`);
+        if (span) span.textContent = result.likesCount;
+    }
+}
+
+async function openComments(id, projectName) {
+    document.getElementById('comment-project-id').value = id;
+    document.getElementById('commentsModalTitle').textContent = `Comments — ${projectName}`;
+    await loadComments(id);
+    new bootstrap.Modal(document.getElementById('commentsModal')).show();
+}
+
+async function loadComments(id) {
+    const res = await fetch(`/api/explore/${id}/comments`);
+    const result = await res.json();
+    const list = document.getElementById('comments-list');
+    if (!list) return;
+
+    if (!result.success || result.comments.length === 0) {
+        list.innerHTML = `<p class="text-muted small">No comments yet. Be the first!</p>`;
+        return;
+    }
+
+    list.innerHTML = result.comments.map(c => `
+        <div class="comment-item mb-2 pb-2">
+            <strong>${escapeHtml(c.commenter_name)}</strong>
+            <p class="mb-0">${escapeHtml(c.content)}</p>
+        </div>
+    `).join('');
+}
+
+async function toggleFeatured(id, isFeatured) {
+    const res = await fetch(`/api/projects/${id}/feature`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ isFeatured })
+    });
+    const result = await res.json();
+    if (result.success) {
+        showToast(isFeatured ? 'Project is now featured on Explore!' : 'Project removed from Explore');
+        await loadAndRenderProjects();
+    } else {
+        showToast(result.error || 'Could not update project', 'error');
+    }
+}
+
+/* ═══════════════════════════════════════════════
    INIT
    ═══════════════════════════════════════════════ */
 document.addEventListener('DOMContentLoaded', () => {
     const isDashboard = document.body.classList.contains('dashboard-body');
     const isRegister = document.body.classList.contains('register-body');
     const isLogin = document.body.classList.contains('login-body');
+    const isExplore = document.getElementById('explore-grid');
 
-    if (isDashboard) {
+    if (isExplore) {
+        initExplorePage();
+    } else if (isDashboard) {
         initDashboardPage();
     } else if (isRegister) {
         initRegisterPage();

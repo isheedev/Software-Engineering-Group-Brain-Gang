@@ -217,9 +217,17 @@ footer, .site-footer {
 }
 footer p { margin: 0.2rem 0; }
 
-.site-footer .footer-brand { font-size: 1.1rem; display: inline-block; margin-bottom: 0.3rem; }
+.site-footer .footer-brand { color: var(--text); font-size: 1.1rem; display: inline-block; margin-bottom: 0.3rem; }
 .site-footer .footer-copy { color: var(--text-faint); font-size: 0.85rem; }
 .site-footer .footer-team { color: var(--text-muted); font-size: 0.85rem; }
+
+.site-footer .row {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 0.5rem;
+}
+.site-footer .col-md-6.text-md-end { text-align: center !important; }
 
 /* ═══════════════════════════════════════════════
    Auth Pages (Login / Register)
@@ -440,6 +448,31 @@ footer p { margin: 0.2rem 0; }
 }
 .project-actions button:hover { border-color: var(--accent); color: var(--accent); }
 .project-actions button.btn-delete:hover { border-color: var(--danger); color: var(--danger); }
+
+.project-actions button.btn-featured-active {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: var(--accent-soft);
+}
+
+.btn-like {
+    background: transparent;
+    border: 1px solid var(--line-strong);
+    color: var(--text-muted);
+    border-radius: var(--radius-sm);
+    padding: 0.3rem 0.7rem;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+.btn-like:hover { border-color: var(--accent); color: var(--accent); }
+
+.comment-item {
+    border-bottom: 1px solid var(--line);
+    font-size: 0.9rem;
+}
+.comment-item strong { color: var(--text); font-size: 0.85rem; }
+.comment-item p { color: var(--text-muted); }
 
 /* Empty state */
 .empty-state {
