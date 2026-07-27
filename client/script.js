@@ -1,6 +1,6 @@
 /* ProjectVault — Frontend Logic (now backed by the real API) */
 
-// Session Helpers (localStorage remembers who's logged in, with a 15 minute expiry timer) 
+// ── Session Helpers (localStorage remembers who's logged in, with a 15-minute expiry) ──
 const SESSION_DURATION_MS = 15 * 60 * 1000; // 15 minutes
 
 const Storage = {
@@ -80,7 +80,7 @@ function showToast(message, type = 'success') {
     const icon = type === 'success' ? 'fa-circle-check' : 'fa-circle-xmark';
     const toast = document.createElement('div');
     toast.className = `custom-toast ${type}`;
-    toast.innerHTML = `<i class="fa-solid ${icon}" style="font-size:1.3rem"></i> ${message}`;
+    toast.innerHTML = `<i class="fa-solid ${icon}" style="font-size:1.5rem"></i> ${message}`;
     container.appendChild(toast);
     setTimeout(() => toast.remove(), 3000);
 }
@@ -142,7 +142,8 @@ function initLoginPage() {
 
         setCurrentUser(result.user);
         showToast('Welcome back, ' + result.user.name + '!');
-        setTimeout(() => window.location.href = 'dashboard.html', 700);
+        const destination = result.user.role === 'admin' ? 'admin.html' : 'dashboard.html';
+        setTimeout(() => window.location.href = destination, 700);
     });
 }
 
@@ -373,7 +374,9 @@ async function initExplorePage() {
     const grid = document.getElementById('explore-grid');
     if (!grid) return;
 
-    const res = await fetch('/api/explore');
+    const user = getCurrentUser();
+    const url = user ? `/api/explore?userId=${user.id}` : '/api/explore';
+    const res = await fetch(url);
     const result = await res.json();
     exploreProjects = result.success ? result.projects : [];
     renderExploreGrid();
@@ -433,7 +436,7 @@ function renderExploreGrid() {
                 </div>
                 <div class="project-card-footer">
                     <div class="d-flex gap-3">
-                        <button onclick="likeProject(${p.id})" class="btn-like" title="Like">
+                        <button onclick="likeProject(${p.id})" class="btn-like ${p.liked_by_user ? 'btn-liked' : ''}" title="${p.liked_by_user ? 'You liked this' : 'Like'}" ${p.liked_by_user ? 'disabled' : ''}>
                             <i class="fa-solid fa-heart"></i> <span id="likes-${p.id}">${p.likes_count}</span>
                         </button>
                         <button onclick="openComments(${p.id}, '${escapeHtml(p.name).replace(/'/g, "\\'")}')" class="btn-like" title="Comments">
@@ -448,11 +451,26 @@ function renderExploreGrid() {
 }
 
 async function likeProject(id) {
-    const res = await fetch(`/api/explore/${id}/like`, { method: 'POST' });
+    const user = getCurrentUser();
+    if (!user) {
+        showToast('Log in to like a project', 'error');
+        setTimeout(() => window.location.href = 'login.html', 900);
+        return;
+    }
+
+    const res = await fetch(`/api/explore/${id}/like`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: user.id })
+    });
     const result = await res.json();
     if (result.success) {
         const span = document.getElementById(`likes-${id}`);
         if (span) span.textContent = result.likesCount;
+        const btn = span ? span.closest('.btn-like') : null;
+        if (btn) { btn.classList.add('btn-liked'); btn.disabled = true; btn.title = 'You liked this'; }
+    } else {
+        showToast(result.error || 'Could not like this project', 'error');
     }
 }
 
@@ -498,6 +516,70 @@ async function toggleFeatured(id, isFeatured) {
 }
 
 /* ═══════════════════════════════════════════════
+   ADMIN PAGE
+   ═══════════════════════════════════════════════ */
+async function initAdminPage() {
+    const user = getCurrentUser();
+    if (!user || user.role !== 'admin') { window.location.href = 'index.html'; return; }
+
+    const logoutBtn = document.getElementById('btn-logout');
+    if (logoutBtn) logoutBtn.addEventListener('click', logout);
+
+    await loadAdminProjects();
+}
+
+async function loadAdminProjects() {
+    const user = getCurrentUser();
+    const res = await fetch(`/api/admin/projects?adminId=${user.id}`);
+    const result = await res.json();
+    const body = document.getElementById('admin-projects-body');
+    const empty = document.getElementById('admin-empty');
+    if (!body) return;
+
+    if (!result.success || result.projects.length === 0) {
+        body.innerHTML = '';
+        if (empty) empty.classList.remove('d-none');
+        return;
+    }
+    if (empty) empty.classList.add('d-none');
+
+    body.innerHTML = result.projects.map(p => `
+        <tr>
+            <td>${escapeHtml(p.name)}</td>
+            <td>${escapeHtml(p.owner_name)} <span class="text-muted small">(${escapeHtml(p.owner_email)})</span></td>
+            <td>
+                <button class="btn btn-sm ${p.is_featured ? 'btn-gradient' : 'btn-outline-light'}" onclick="adminToggleFeatured(${p.id}, ${!p.is_featured})">
+                    ${p.is_featured ? 'Featured' : 'Not featured'}
+                </button>
+            </td>
+            <td class="text-muted small">${new Date(p.created_at).toLocaleDateString()}</td>
+            <td><button class="btn btn-sm btn-outline-danger" onclick="adminDeleteProject(${p.id})"><i class="fa-solid fa-trash"></i></button></td>
+        </tr>
+    `).join('');
+}
+
+async function adminToggleFeatured(id, isFeatured) {
+    const user = getCurrentUser();
+    const res = await fetch(`/api/admin/projects/${id}/feature`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ adminId: user.id, isFeatured })
+    });
+    const result = await res.json();
+    if (result.success) { showToast('Updated'); await loadAdminProjects(); }
+    else { showToast(result.error || 'Could not update', 'error'); }
+}
+
+async function adminDeleteProject(id) {
+    if (!confirm('Delete this project permanently?')) return;
+    const user = getCurrentUser();
+    const res = await fetch(`/api/admin/projects/${id}?adminId=${user.id}`, { method: 'DELETE' });
+    const result = await res.json();
+    if (result.success) { showToast('Project deleted'); await loadAdminProjects(); }
+    else { showToast(result.error || 'Could not delete', 'error'); }
+}
+
+/* ═══════════════════════════════════════════════
    INIT
    ═══════════════════════════════════════════════ */
 document.addEventListener('DOMContentLoaded', () => {
@@ -505,8 +587,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const isRegister = document.body.classList.contains('register-body');
     const isLogin = document.body.classList.contains('login-body');
     const isExplore = document.getElementById('explore-grid');
+    const isAdmin = document.getElementById('admin-projects-body');
 
-    if (isExplore) {
+    if (isAdmin) {
+        initAdminPage();
+    } else if (isExplore) {
         initExplorePage();
     } else if (isDashboard) {
         initDashboardPage();

@@ -56,7 +56,7 @@ router.post('/login', async (req, res) => {
       return res.status(401).json({ success: false, error: 'Invalid email or password' });
     }
 
-    const user = { id: dbUser.id, name: dbUser.name, email: dbUser.email };
+    const user = { id: dbUser.id, name: dbUser.name, email: dbUser.email, role: dbUser.role };
     res.json({ success: true, user });
   } catch (err) {
     console.error(err);
