@@ -21,11 +21,6 @@ ProjectVault is a web application that helps students organize and showcase thei
 
 ---
 
-## Installation / Setup (Future Step)
-Instructions will be added as the project is developed.
-
----
-
 ## Team Members
 - Alexander Khauv  
 - Tahia Shawkat  
@@ -34,4 +29,4 @@ Instructions will be added as the project is developed.
 ---
 
 ## Project Status
-This project is currently in Sprint 1 (initial setup and planning stage).
+This project is complete.
