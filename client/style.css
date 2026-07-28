@@ -799,6 +799,20 @@ footer p { margin: 0.2rem 0; }
     color: white;
 }
 
+.admin-row-actions { display: flex; gap: 0.5rem; }
+
+.admin-edit-btn {
+    background: transparent;
+    border: 1px solid var(--line-strong);
+    color: var(--text-muted);
+    width: 34px;
+    height: 34px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+.admin-edit-btn:hover { border-color: var(--accent); color: var(--accent); }
+
 .admin-delete-btn {
     background: transparent;
     border: 1px solid var(--line-strong);

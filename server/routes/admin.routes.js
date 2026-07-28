@@ -37,6 +37,29 @@ router.get('/projects', async (req, res) => {
   }
 });
 
+// PUT /api/admin/projects/:id  { adminId, name, description, technologies, github, imageUrl }
+router.put('/projects/:id', async (req, res) => {
+  try {
+    const { adminId, name, description, technologies, github, imageUrl } = req.body;
+    if (!(await requireAdmin(adminId, res))) return;
+
+    if (!name || !description || !technologies) {
+      return res.status(400).json({ success: false, error: 'Missing required fields' });
+    }
+
+    await pool.query(
+      `UPDATE projects SET name = ?, description = ?, technologies = ?, github_link = ?, image_url = ?
+       WHERE id = ?`,
+      [name, description, technologies, github || null, imageUrl || null, req.params.id]
+    );
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, error: 'Server error' });
+  }
+});
+
 // PATCH /api/admin/projects/:id/feature  { adminId, isFeatured }
 router.patch('/projects/:id/feature', async (req, res) => {
   try {

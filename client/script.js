@@ -181,6 +181,9 @@ async function initDashboardPage() {
     const greetEl = document.getElementById('dash-username');
     if (greetEl) greetEl.textContent = user.name.split(' ')[0];
 
+    const adminLink = document.getElementById('admin-nav-link');
+    if (adminLink && user.role === 'admin') adminLink.classList.remove('d-none');
+
     const logoutBtn = document.getElementById('btn-logout');
     if (logoutBtn) logoutBtn.addEventListener('click', logout);
 
@@ -430,7 +433,7 @@ function renderExploreGrid() {
                 ${imgHtml}
                 <div class="project-card-body">
                     <h3>${escapeHtml(p.name)}</h3>
-                    <p class="text-muted small mb-2">by ${escapeHtml(p.owner_name)}</p>
+                    <p class="project-owner">by ${escapeHtml(p.owner_name)}</p>
                     <p>${escapeHtml(p.description)}</p>
                     <div class="tech-tags">${techTags}</div>
                 </div>
@@ -488,7 +491,7 @@ async function loadComments(id) {
     if (!list) return;
 
     if (!result.success || result.comments.length === 0) {
-        list.innerHTML = `<p class="text-muted small">No comments yet. Be the first!</p>`;
+        list.innerHTML = `<p class="admin-email">No comments yet. Be the first!</p>`;
         return;
     }
 
@@ -518,12 +521,45 @@ async function toggleFeatured(id, isFeatured) {
 /* ═══════════════════════════════════════════════
    ADMIN PAGE
    ═══════════════════════════════════════════════ */
+let adminProjects = [];
+
 async function initAdminPage() {
     const user = getCurrentUser();
     if (!user || user.role !== 'admin') { window.location.href = 'index.html'; return; }
 
     const logoutBtn = document.getElementById('btn-logout');
     if (logoutBtn) logoutBtn.addEventListener('click', logout);
+
+    const searchInput = document.getElementById('admin-search');
+    if (searchInput) searchInput.addEventListener('input', renderAdminTable);
+
+    const editForm = document.getElementById('adminEditForm');
+    if (editForm) {
+        editForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const id = document.getElementById('admin-edit-id').value;
+            const res = await fetch(`/api/admin/projects/${id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    adminId: user.id,
+                    name: document.getElementById('admin-edit-name').value.trim(),
+                    description: document.getElementById('admin-edit-desc').value.trim(),
+                    technologies: document.getElementById('admin-edit-techs').value.trim(),
+                    github: document.getElementById('admin-edit-github').value.trim(),
+                    imageUrl: document.getElementById('admin-edit-image').value.trim()
+                })
+            });
+            const result = await res.json();
+            if (result.success) {
+                showToast('Project updated');
+                bootstrap.Modal.getInstance(document.getElementById('adminEditModal')).hide();
+                await loadAdminProjects();
+            } else {
+                showToast(result.error || 'Could not update project', 'error');
+            }
+        });
+    }
 
     await loadAdminProjects();
 }
@@ -532,30 +568,61 @@ async function loadAdminProjects() {
     const user = getCurrentUser();
     const res = await fetch(`/api/admin/projects?adminId=${user.id}`);
     const result = await res.json();
+    adminProjects = result.success ? result.projects : [];
+    renderAdminTable();
+}
+
+function renderAdminTable() {
     const body = document.getElementById('admin-projects-body');
     const empty = document.getElementById('admin-empty');
     if (!body) return;
 
-    if (!result.success || result.projects.length === 0) {
+    const search = (document.getElementById('admin-search')?.value || '').toLowerCase();
+    let projects = adminProjects;
+    if (search) {
+        projects = projects.filter(p =>
+            p.name.toLowerCase().includes(search) ||
+            p.owner_name.toLowerCase().includes(search)
+        );
+    }
+
+    if (projects.length === 0) {
         body.innerHTML = '';
         if (empty) empty.classList.remove('d-none');
         return;
     }
     if (empty) empty.classList.add('d-none');
 
-    body.innerHTML = result.projects.map(p => `
+    body.innerHTML = projects.map(p => {
+        const created = p.created_at ? new Date(p.created_at).toLocaleDateString() : '—';
+        return `
         <tr>
             <td>${escapeHtml(p.name)}</td>
-            <td>${escapeHtml(p.owner_name)} <span class="text-muted small">(${escapeHtml(p.owner_email)})</span></td>
+            <td>${escapeHtml(p.owner_name)} <span class="admin-email">(${escapeHtml(p.owner_email)})</span></td>
             <td>
-                <button class="btn btn-sm ${p.is_featured ? 'btn-gradient' : 'btn-outline-light'}" onclick="adminToggleFeatured(${p.id}, ${!p.is_featured})">
+                <button class="admin-feature-btn ${p.is_featured ? 'active' : ''}" onclick="adminToggleFeatured(${p.id}, ${!p.is_featured})">
                     ${p.is_featured ? 'Featured' : 'Not featured'}
                 </button>
             </td>
-            <td class="text-muted small">${new Date(p.created_at).toLocaleDateString()}</td>
-            <td><button class="btn btn-sm btn-outline-danger" onclick="adminDeleteProject(${p.id})"><i class="fa-solid fa-trash"></i></button></td>
-        </tr>
-    `).join('');
+            <td class="admin-date">${created}</td>
+            <td class="admin-row-actions">
+                <button class="admin-edit-btn" onclick="openAdminEdit(${p.id})"><i class="fa-solid fa-pen-to-square"></i></button>
+                <button class="admin-delete-btn" onclick="adminDeleteProject(${p.id})"><i class="fa-solid fa-trash"></i></button>
+            </td>
+        </tr>`;
+    }).join('');
+}
+
+function openAdminEdit(id) {
+    const p = adminProjects.find(p => p.id === id);
+    if (!p) return;
+    document.getElementById('admin-edit-id').value = p.id;
+    document.getElementById('admin-edit-name').value = p.name;
+    document.getElementById('admin-edit-desc').value = p.description;
+    document.getElementById('admin-edit-techs').value = p.technologies;
+    document.getElementById('admin-edit-github').value = p.github_link || '';
+    document.getElementById('admin-edit-image').value = p.image_url || '';
+    new bootstrap.Modal(document.getElementById('adminEditModal')).show();
 }
 
 async function adminToggleFeatured(id, isFeatured) {
