@@ -1,3 +1,5 @@
+/** @jest-environment node */
+
 /**
  * ProjectVault — API Route Tests
  * Covers: registration, duplicate registration, successful login,
